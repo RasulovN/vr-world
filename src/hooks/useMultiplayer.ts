@@ -1,0 +1,92 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
+import * as THREE from 'three';
+import { toast } from 'sonner';
+
+export interface Player {
+  id: string;
+  position: THREE.Vector3;
+  rotation: number;
+}
+
+export interface MultiplayerState {
+  localPlayerId: string | null;
+  players: Record<string, Player>;
+  isConnected: boolean;
+}
+
+export const useMultiplayer = () => {
+  const socketRef = useRef<Socket | null>(null);
+  const [state, setState] = useState<MultiplayerState>({
+    localPlayerId: null,
+    players: {},
+    isConnected: false,
+  });
+
+  // Connect to WebSocket server
+  useEffect(() => {
+    const socket = io('http://localhost:3001', {
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+    });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('Connected to multiplayer server');
+      setState(prev => ({ ...prev, isConnected: true, localPlayerId: socket.id }));
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from multiplayer server');
+      setState(prev => ({ ...prev, isConnected: false, localPlayerId: null, players: {} }));
+    });
+
+    // Handle new player joining
+    socket.on('playerJoined', (playerId: string) => {
+      toast.success(`Player ${playerId.slice(0, 8)} joined the game`);
+    });
+
+    // Handle other players' updates
+    socket.on('playerUpdate', (playerData: { id: string; position: THREE.Vector3; rotation: number }) => {
+      setState(prev => ({
+        ...prev,
+        players: {
+          ...prev.players,
+          [playerData.id]: {
+            id: playerData.id,
+            position: new THREE.Vector3(playerData.position.x, playerData.position.y, playerData.position.z),
+            rotation: playerData.rotation,
+          },
+        },
+      }));
+    });
+
+    // Handle player disconnection
+    socket.on('playerDisconnected', (playerId: string) => {
+      setState(prev => {
+        const newPlayers = { ...prev.players };
+        delete newPlayers[playerId];
+        return { ...prev, players: newPlayers };
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  // Send local player position update
+  const updatePosition = useCallback((position: THREE.Vector3, rotation: number) => {
+    if (socketRef.current && state.isConnected) {
+      socketRef.current.emit('updatePosition', {
+        position: { x: position.x, y: position.y, z: position.z },
+        rotation,
+      });
+    }
+  }, [state.isConnected]);
+
+  return {
+    ...state,
+    updatePosition,
+  };
+};

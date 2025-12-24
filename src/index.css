@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 220 20% 4%;
+    --foreground: 200 100% 95%;
+
+    --card: 220 25% 8%;
+    --card-foreground: 200 100% 95%;
+
+    --popover: 220 25% 6%;
+    --popover-foreground: 200 100% 95%;
+
+    --primary: 185 100% 50%;
+    --primary-foreground: 220 20% 4%;
+
+    --secondary: 300 100% 60%;
+    --secondary-foreground: 220 20% 4%;
+
+    --muted: 220 20% 15%;
+    --muted-foreground: 200 30% 60%;
+
+    --accent: 270 100% 65%;
+    --accent-foreground: 200 100% 95%;
+
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 200 100% 95%;
+
+    --border: 200 50% 20%;
+    --input: 220 25% 12%;
+    --ring: 185 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Custom cyber colors */
+    --neon-cyan: 185 100% 50%;
+    --neon-magenta: 300 100% 60%;
+    --neon-purple: 270 100% 65%;
+    --neon-blue: 220 100% 60%;
+    --grid-color: 185 100% 50%;
+    
+    /* Gradients */
+    --gradient-cyber: linear-gradient(135deg, hsl(var(--neon-cyan)), hsl(var(--neon-magenta)));
+    --gradient-dark: linear-gradient(180deg, hsl(220, 20%, 8%), hsl(220, 20%, 2%));
+    --gradient-glow: radial-gradient(ellipse at center, hsl(var(--neon-cyan) / 0.3), transparent 70%);
+    
+    /* Shadows */
+    --shadow-neon: 0 0 20px hsl(var(--neon-cyan) / 0.5), 0 0 40px hsl(var(--neon-cyan) / 0.3);
+    --shadow-magenta: 0 0 20px hsl(var(--neon-magenta) / 0.5), 0 0 40px hsl(var(--neon-magenta) / 0.3);
+
+    --sidebar-background: 220 25% 6%;
+    --sidebar-foreground: 200 100% 95%;
+    --sidebar-primary: 185 100% 50%;
+    --sidebar-primary-foreground: 220 20% 4%;
+    --sidebar-accent: 220 25% 12%;
+    --sidebar-accent-foreground: 200 100% 95%;
+    --sidebar-border: 200 50% 20%;
+    --sidebar-ring: 185 100% 50%;
+  }
+
+  .dark {
+    --background: 220 20% 4%;
+    --foreground: 200 100% 95%;
+    --card: 220 25% 8%;
+    --card-foreground: 200 100% 95%;
+    --popover: 220 25% 6%;
+    --popover-foreground: 200 100% 95%;
+    --primary: 185 100% 50%;
+    --primary-foreground: 220 20% 4%;
+    --secondary: 300 100% 60%;
+    --secondary-foreground: 220 20% 4%;
+    --muted: 220 20% 15%;
+    --muted-foreground: 200 30% 60%;
+    --accent: 270 100% 65%;
+    --accent-foreground: 200 100% 95%;
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 200 100% 95%;
+    --border: 200 50% 20%;
+    --input: 220 25% 12%;
+    --ring: 185 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .cyber-glow {
+    box-shadow: var(--shadow-neon);
+  }
+
+  .cyber-glow-magenta {
+    box-shadow: var(--shadow-magenta);
+  }
+
+  .cyber-gradient {
+    background: var(--gradient-cyber);
+  }
+
+  .cyber-text {
+    background: var(--gradient-cyber);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .cyber-border {
+    border: 1px solid hsl(var(--neon-cyan) / 0.5);
+    box-shadow: inset 0 0 20px hsl(var(--neon-cyan) / 0.1);
+  }
+
+  .glass-panel {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+}
+
+@layer utilities {
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+      filter: brightness(1);
+    }
+    50% {
+      opacity: 0.8;
+      filter: brightness(1.2);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+}
