@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
@@ -14,15 +14,19 @@ interface PlayerControllerProps {
   onNearZone?: (near: boolean) => void;
 }
 
+export interface PlayerControllerRef {
+  teleport: (position: THREE.Vector3) => void;
+}
+
 type CameraMode = 'follow' | 'head';
 
-export const PlayerController = ({
+export const PlayerController = forwardRef<PlayerControllerRef, PlayerControllerProps>(({
   onPositionChange,
   onYawChange,
   onPitchChange,
   initialPosition,
   onNearZone,
-}: PlayerControllerProps) => {
+}, ref) => {
   const { gl } = useThree();
   const playerRootRef = useRef<THREE.Group>(null);
   const cameraPivotRef = useRef<THREE.Group>(null);
@@ -195,7 +199,18 @@ export const PlayerController = ({
     }
 
     // Notify parent of position change
+    onPositionChange(positionRef.current);
   });
+
+  // Expose teleport method via ref
+  useImperativeHandle(ref, () => ({
+    teleport: (position: THREE.Vector3) => {
+      positionRef.current.copy(position);
+      if (playerRootRef.current) {
+        playerRootRef.current.position.copy(position);
+      }
+    },
+  }));
 
   return (
     <group ref={playerRootRef}>
@@ -215,4 +230,4 @@ export const PlayerController = ({
       </group>
     </group>
   );
-};
+});
