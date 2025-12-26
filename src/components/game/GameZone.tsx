@@ -1,24 +1,62 @@
-import { usePlane } from '@react-three/cannon';
-import { useTexture } from '@react-three/drei';
+import { usePlane, useBox } from '@react-three/cannon';
 import * as THREE from 'three';
 
-export const GameZone = () => {
+interface GameZoneProps {
+  setCanEnter: (can: boolean) => void;
+  setCanExit: (can: boolean) => void;
+}
+
+export const GameZone = ({ setCanEnter, setCanExit }: GameZoneProps) => {
   const [ref] = usePlane(() => ({
     rotation: [-Math.PI / 2, 0, 0],
     position: [0, 0, 100], // Yer dan ancha masofada joylashgan
     type: 'Static',
   }));
 
-  const textures = useTexture({
-    map: '/textures/image.png',
-  });
+  // Physics bodies for walls
+  const [frontWallRef] = useBox(() => ({
+    position: [0, 5, 250],
+    args: [200, 10, 1],
+    type: 'Static',
+  }));
 
-  // texture takrorlanishi (katta arena uchun)
-  textures.map.wrapS = textures.map.wrapT = THREE.RepeatWrapping;
-  textures.map.repeat.set(20, 20); // Kamaytirdim takrorlanishni
-  textures.map.minFilter = THREE.LinearMipmapLinearFilter;
-  textures.map.magFilter = THREE.LinearFilter;
-  textures.map.generateMipmaps = true;
+  const [backWallRef] = useBox(() => ({
+    position: [0, 5, 50],
+    args: [200, 10, 1],
+    type: 'Static',
+  }));
+
+  const [leftWallRef] = useBox(() => ({
+    position: [-100, 5, 100],
+    args: [1, 10, 200],
+    type: 'Static',
+  }));
+
+  const [rightWallRef] = useBox(() => ({
+    position: [100, 5, 100],
+    args: [1, 10, 200],
+    type: 'Static',
+  }));
+
+  // Entrance trigger (sensor collider)
+  const [entranceTriggerRef] = useBox(() => ({
+    position: [0, 1, 49], // Just outside the back wall
+    args: [10, 5, 2], // Small trigger area
+    type: 'Static',
+    isTrigger: true,
+    onCollideBegin: () => setCanEnter(true),
+    onCollideEnd: () => setCanEnter(false),
+  }));
+
+  // Exit trigger (sensor collider)
+  const [exitTriggerRef] = useBox(() => ({
+    position: [0, 1, 251], // Just outside the front wall
+    args: [10, 5, 2], // Small trigger area
+    type: 'Static',
+    isTrigger: true,
+    onCollideBegin: () => setCanExit(true),
+    onCollideEnd: () => setCanExit(false),
+  }));
 
   return (
     <group>
@@ -27,12 +65,11 @@ export const GameZone = () => {
         {/* ARENA SIZE */}
         <planeGeometry args={[200, 200]} />
 
-        {/* SHOOTER-STYLE MATERIAL - Flickering tuzatildi */}
+        {/* SHOOTER-STYLE MATERIAL - Simple green color */}
         <meshStandardMaterial
-          map={textures.map}
           roughness={0.8}
           metalness={0.1}
-          color="#94a0b5"
+          color="#22c55e" // Simple green color
           transparent={false}
           alphaTest={0}
           depthWrite={true}
@@ -42,34 +79,34 @@ export const GameZone = () => {
 
       {/* Glass-like boundaries around GameZone */}
       {/* Front Wall */}
-      <mesh position={[0, 5, 200]} receiveShadow>
+      <mesh ref={frontWallRef as any} receiveShadow>
         <boxGeometry args={[200, 10, 1]} />
         <meshStandardMaterial
-          color="#00d4d4"
+          color="#58c8db"
           transparent
-          opacity={0.3}
+          opacity={0.5}
           roughness={0.1}
           metalness={0.8}
         />
       </mesh>
 
       {/* Back Wall */}
-      <mesh position={[0, 5, 0]} receiveShadow>
+      <mesh ref={backWallRef as any} receiveShadow>
         <boxGeometry args={[200, 10, 1]} />
         <meshStandardMaterial
-          color="#00d4d4"
+          color="#17a9e8"
           transparent
-          opacity={0.3}
+          opacity={0.5}
           roughness={0.1}
           metalness={0.8}
         />
       </mesh>
 
       {/* Left Wall */}
-      <mesh position={[-100, 5, 100]} receiveShadow>
+      <mesh ref={leftWallRef as any} receiveShadow>
         <boxGeometry args={[1, 10, 200]} />
         <meshStandardMaterial
-          color="#00d4d4"
+          color="#00cfcf"
           transparent
           opacity={0.3}
           roughness={0.1}
@@ -78,10 +115,10 @@ export const GameZone = () => {
       </mesh>
 
       {/* Right Wall */}
-      <mesh position={[100, 5, 100]} receiveShadow>
+      <mesh ref={rightWallRef as any} receiveShadow>
         <boxGeometry args={[1, 10, 200]} />
         <meshStandardMaterial
-          color="#00d4d4"
+          color="#0ba3a3"
           transparent
           opacity={0.3}
           roughness={0.1}
@@ -89,35 +126,49 @@ export const GameZone = () => {
         />
       </mesh>
 
-      {/* Corner Pillars for Arena feel */}
-      <mesh position={[-90, 8, 10]} receiveShadow>
-        <cylinderGeometry args={[2, 2, 16]} />
-        <meshStandardMaterial color="#ff0000" roughness={0.3} metalness={0.7} />
-      </mesh>
-
-      <mesh position={[90, 8, 10]} receiveShadow>
-        <cylinderGeometry args={[2, 2, 16]} />
-        <meshStandardMaterial color="#ff0000" roughness={0.3} metalness={0.7} />
-      </mesh>
-
-      <mesh position={[-90, 8, 190]} receiveShadow>
-        <cylinderGeometry args={[2, 2, 16]} />
-        <meshStandardMaterial color="#ff0000" roughness={0.3} metalness={0.7} />
-      </mesh>
-
-      <mesh position={[90, 8, 190]} receiveShadow>
-        <cylinderGeometry args={[2, 2, 16]} />
-        <meshStandardMaterial color="#ff0000" roughness={0.3} metalness={0.7} />
-      </mesh>
-
-      {/* Center Platform */}
-      <mesh position={[0, 1, 100]} receiveShadow>
-        <cylinderGeometry args={[15, 15, 2]} />
+      {/* Entrance Trigger Visual Indicator */}
+      <mesh position={[0, 1, 49]}>
+        <boxGeometry args={[10, 5, 0.1]} />
         <meshStandardMaterial
-          color="#d4c7c7"
-          roughness={0.8}
-          metalness={0.2}
+          color="#00ff00"
+          transparent
+          opacity={0.3}
+          emissive="#00ff00"
+          emissiveIntensity={0.2}
         />
+      </mesh>
+
+      {/* Exit Trigger Visual Indicator */}
+      <mesh position={[0, 1, 251]}>
+        <boxGeometry args={[10, 5, 0.1]} />
+        <meshStandardMaterial
+          color="#ff0000"
+          transparent
+          opacity={0.3}
+          emissive="#ff0000"
+          emissiveIntensity={0.2}
+        />
+      </mesh>
+
+      {/* Corner Pillars for Arena feel */}
+      <mesh position={[-90, 8, 60]} receiveShadow>
+        <cylinderGeometry args={[2, 2, 16]} />
+        <meshStandardMaterial color="#e30b0b" roughness={0.3} metalness={0.7} />
+      </mesh>
+
+      <mesh position={[90, 8, 60]} receiveShadow>
+        <cylinderGeometry args={[2, 2, 16]} />
+        <meshStandardMaterial color="#ff0f0f" roughness={0.3} metalness={0.7} />
+      </mesh>
+
+      <mesh position={[-90, 8, 240]} receiveShadow>
+        <cylinderGeometry args={[2, 2, 16]} />
+        <meshStandardMaterial color="#ff0f0f" roughness={0.3} metalness={0.7} />
+      </mesh>
+
+      <mesh position={[90, 8, 240]} receiveShadow>
+        <cylinderGeometry args={[2, 2, 16]} />
+        <meshStandardMaterial color="#ff0f0f" roughness={0.3} metalness={0.7} />
       </mesh>
     </group>
   );

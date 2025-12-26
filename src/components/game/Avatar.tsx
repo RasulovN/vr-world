@@ -133,7 +133,7 @@ export const Avatar = ({ isRemote = false, remotePosition, remoteRotation, isMov
       </mesh>
 
       {/* Point light for glow effect */}
-      <pointLight color="#00f5ff" intensity={2} distance={5} />
+      <pointLight color="#00f5ff" intensity={2} distance={10} />
     </group>
   );
 };

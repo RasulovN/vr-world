@@ -182,20 +182,19 @@ export const PlayerController = ({
       cameraRef.current.position.set(0, 2, -5);
     } else {
       // At avatar head
-      cameraRef.current.position.set(0, 1.8, 0);
+      cameraRef.current.position.set(0, 1.8, 5);
     }
 
-    // Check if near GameZone (position [0, 0, 100])
-    const zonePosition = new THREE.Vector3(0, 0, 100);
+    // Check if near GameZone (position [0, 0, 50])
+    const zonePosition = new THREE.Vector3(0, 0, 50);
     const distanceToZone = positionRef.current.distanceTo(zonePosition);
-    const isNearZone = distanceToZone < 15; // 15 units radius for larger zone
+    const isNearZone = distanceToZone < 10; // 10 units radius
 
     if (onNearZone) {
       onNearZone(isNearZone);
     }
 
     // Notify parent of position change
-    onPositionChange(positionRef.current.clone());
   });
 
   return (

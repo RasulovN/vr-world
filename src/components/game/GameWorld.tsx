@@ -1,14 +1,14 @@
-import { useState, useCallback, Suspense, useEffect } from 'react';
+import { useState, useCallback, Suspense, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/cannon';
 import * as THREE from 'three';
 import { CyberGrid } from './CyberGrid';
-import { PlayerController } from './PlayerController';
+import { PlayerController, PlayerControllerRef } from './PlayerController';
 import { Avatar } from './Avatar';
 import { SpawnedObject, SpawnedObjectData } from './SpawnedObject';
 import { CommandInput } from './CommandInput';
 import { GameUI } from './GameUI';
-import { useAICommand } from '@/hooks/useAICommand';
+import { useAICommand, AIResponse } from '@/hooks/useAICommand';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { toast } from 'sonner';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
@@ -23,12 +23,15 @@ interface GameWorldProps {
 }
 
 export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorldProps) => {
+  const playerControllerRef = useRef<PlayerControllerRef>(null);
   const [playerPosition, setPlayerPosition] = useState(new THREE.Vector3(0, 1, 0));
   const [playerYaw, setPlayerYaw] = useState(0);
   const [cameraPitch, setCameraPitch] = useState(0);
   const [spawnedObjects, setSpawnedObjects] = useState<SpawnedObjectData[]>([]);
   const [isNearZone, setIsNearZone] = useState(false);
   const [isInZone, setIsInZone] = useState(false);
+  const [canEnterGameZone, setCanEnterGameZone] = useState(false);
+  const [canExitGameZone, setCanExitGameZone] = useState(false);
 
   const { localPlayerId, players, spawnedObjects: multiplayerSpawnedObjects, isConnected, updatePosition, spawnObject } = useMultiplayer();
   const { executeCommand, calculateSpawnPosition, isProcessing } = useAICommand(playerPosition);
@@ -51,14 +54,39 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
   }, []);
 
   const handleEnterZone = useCallback(() => {
-    // Move player to center of GameZone
-    const zoneCenter = new THREE.Vector3(0, 1, 100);
+    // Teleport player to center of GameZone
+    const zoneCenter = new THREE.Vector3(0, 1, 150);
+    playerControllerRef.current?.teleport(zoneCenter);
     setPlayerPosition(zoneCenter);
     setIsInZone(true);
+    setCanEnterGameZone(false); // Reset trigger state
     toast.success("Game Zone ga kirdingiz! Otishma o'yinlariga tayyor bo'ling!", {
       description: "Arena chegaralarida ehtiyot bo'ling!",
     });
   }, []);
+
+  const handleExitZone = useCallback(() => {
+    // Teleport player outside GameZone
+    const exitPos = new THREE.Vector3(0, 1, 50);
+    playerControllerRef.current?.teleport(exitPos);
+    setPlayerPosition(exitPos);
+    setIsInZone(false);
+    setCanExitGameZone(false); // Reset trigger state
+    toast.info("Game Zone dan chiqdingiz");
+  }, []);
+
+  // Trigger callbacks for entrance/exit detection
+  const handleEnterTrigger = useCallback((entered: boolean) => {
+    if (!isInZone) {
+      setCanEnterGameZone(entered);
+    }
+  }, [isInZone]);
+
+  const handleExitTrigger = useCallback((entered: boolean) => {
+    if (isInZone) {
+      setCanExitGameZone(entered);
+    }
+  }, [isInZone]);
 
   // Send position updates to server
   useEffect(() => {
@@ -77,19 +105,16 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
         } else {
           startRecording();
         }
-      } else if (e.key === 'm' || e.key === 'M') {
+      } else if (e.ctrlKey && e.key === 'm' || e.ctrlKey && e.key === 'M') {
         e.preventDefault();
         toggleMute();
-      } else if ((e.key === 'e' || e.key === 'E') && isNearZone && !isInZone) {
+      } else if ((e.key === 'e' || e.key === 'E')) {
         e.preventDefault();
-        handleEnterZone();
-      } else if ((e.key === 'q' || e.key === 'Q') && isInZone) {
-        e.preventDefault();
-        // Exit zone
-        const exitPos = new THREE.Vector3(0, 1, 50);
-        setPlayerPosition(exitPos);
-        setIsInZone(false);
-        toast.info("Game Zone dan chiqdingiz");
+        if (canEnterGameZone) {
+          handleEnterZone();
+        } else if (canExitGameZone) {
+          handleExitZone();
+        }
       }
     };
 
@@ -103,24 +128,42 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
     console.log('Command response:', response);
 
     if (response.action === 'spawn' && response.asset_id && response.position) {
-      const spawnPos = calculateSpawnPosition(response.position);
-      const newObject: SpawnedObjectData = {
-        id: `${response.asset_id}-${Date.now()}`,
-        assetId: response.asset_id,
-        position: spawnPos,
-      };
+      const quantity = response.quantity || 1;
+      const newObjects: SpawnedObjectData[] = [];
 
-      console.log('Creating object locally:', newObject);
+      for (let i = 0; i < quantity; i++) {
+        // Calculate position with slight variation for multiple objects
+        const basePos = calculateSpawnPosition(response.position);
+        const spawnPos = basePos.clone();
 
-      // Add to local state
-      setSpawnedObjects(prev => [...prev, newObject]);
+        if (quantity > 1) {
+          // Add slight random offset for multiple objects
+          const spread = 2; // units
+          spawnPos.x += (Math.random() - 0.5) * spread;
+          spawnPos.z += (Math.random() - 0.5) * spread;
+        }
 
-      // Send to other players
-      console.log('Sending object to server...');
-      spawnObject(newObject.id, newObject.assetId, newObject.position);
+        const newObject: SpawnedObjectData = {
+          id: `${response.asset_id}-${Date.now()}-${i}`,
+          assetId: response.asset_id,
+          position: spawnPos,
+        };
 
-      toast.success(`"${response.asset_id.replace('.glb', '')}" yaratildi!`, {
-        description: `Pozitsiya: X:${spawnPos.x.toFixed(1)}, Z:${spawnPos.z.toFixed(1)}`,
+        newObjects.push(newObject);
+
+        // Send to other players
+        console.log('Sending object to server:', newObject);
+        spawnObject(newObject.id, newObject.assetId, newObject.position);
+      }
+
+      console.log(`Creating ${quantity} objects locally:`, newObjects);
+
+      // Add all objects to local state at once
+      setSpawnedObjects(prev => [...prev, ...newObjects]);
+
+      const objectName = response.asset_id.replace('.glb', '');
+      toast.success(`${quantity > 1 ? quantity + ' ta ' : ''}"${objectName}" ${quantity > 1 ? 'yaratildi' : 'yaratildi'}!`, {
+        description: quantity > 1 ? `${quantity} ta ob'yekt joylashtirildi` : `Pozitsiya: X:${newObjects[0].position.x.toFixed(1)}, Z:${newObjects[0].position.z.toFixed(1)}`,
       });
     } else if (response.action === 'error') {
       toast.error("Xatolik", {
@@ -158,9 +201,13 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
 
             <Wall />
 
-            <GameZone />
+            <GameZone
+              setCanEnter={setCanEnterGameZone}
+              setCanExit={setCanExitGameZone}
+            />
             {/* Local player controller */}
             <PlayerController
+              ref={playerControllerRef}
               onPositionChange={handlePositionChange}
               onYawChange={handleYawChange}
               onPitchChange={handlePitchChange}
@@ -205,17 +252,17 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
         onPhysicsToggle={onPhysicsToggle || (() => {})}
       />
 
-      {/* Game Zone Entry/Exit UI */}
-      {isNearZone && !isInZone && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 backdrop-blur-sm rounded-lg p-6 text-white text-center">
-          <h3 className="text-xl font-bold mb-4">🚀 Game Zone ga kirish</h3>
-          <p className="mb-4">Siz Game Zone yaqinidasiz. Otishma arenasi uchun E tugmasini bosing.</p>
-          <button
-            className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium"
-            onClick={handleEnterZone}
-          >
-            Kirish (E)
-          </button>
+      {/* Game Zone Entry Hint */}
+      {canEnterGameZone && (
+        <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-sm rounded-lg px-4 py-2 text-white text-center">
+          <p className="text-sm">Press [E] to Enter GameZone</p>
+        </div>
+      )}
+
+      {/* Game Zone Exit Hint */}
+      {canExitGameZone && (
+        <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-sm rounded-lg px-4 py-2 text-white text-center">
+          <p className="text-sm">Press [E] to Exit GameZone</p>
         </div>
       )}
 
