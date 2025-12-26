@@ -35,7 +35,7 @@ export const useMultiplayer = () => {
 
   // Connect to WebSocket server
   useEffect(() => {
-    const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3333/' : 'wss://45.138.158.158:3333/';
+    const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3333/' : 'wss://vr.smart-city-qarshi.uz/';
     const socket = io(`${API_BASE_URL}`, {
       transports: ['websocket', 'polling'],
       timeout: 20000,

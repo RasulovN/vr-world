@@ -109,7 +109,7 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
       } else if (e.ctrlKey && e.key === 'm' || e.ctrlKey && e.key === 'M') {
         e.preventDefault();
         toggleMute();
-      } else if ((e.key === 'e' || e.key === 'E')) {
+      } else if ((e.ctrlKey &&e.key === 'e' || e.ctrlKey && e.key === 'E')) {
         e.preventDefault();
         if (canEnterGameZone) {
           handleEnterZone();
