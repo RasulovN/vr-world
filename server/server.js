@@ -32,6 +32,11 @@ io.on('connection', (socket) => {
   handleVoiceEvents(socket);
 });
 
+
+app.get('/', (req, res) => {
+  res.send('Server working!');
+});
+
 server.listen(config.port, () => {
   console.log(`Multiplayer server running on port ${config.port} in ${process.env.NODE_ENV} mode`);
 });
