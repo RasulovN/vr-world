@@ -1,10 +1,11 @@
 const config = {
   development: {
-    corsOrigins: ["http://localhost:5000", "https://vr-world-bay.vercel.app/"],
+    // corsOrigins: ["http://localhost:5000", "https://vr-world-bay.vercel.app/"],
     port: process.env.PORT || 3333,
-  },
-  production: {
-    corsOrigins: ["https://vr-world-bay.vercel.app/"],
+},
+production: {
+      corsOrigins: "*",
+    // corsOrigins: ["https://vr-world-bay.vercel.app/"],
     port: process.env.PORT || 3333,
   }
 };
