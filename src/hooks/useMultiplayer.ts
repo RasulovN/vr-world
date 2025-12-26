@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import * as THREE from 'three';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/api/api';
 
 export interface Player {
   id: string;
@@ -34,7 +35,7 @@ export const useMultiplayer = () => {
 
   // Connect to WebSocket server
   useEffect(() => {
-    const socket = io('http://localhost:3001', {
+    const socket = io(`${API_BASE_URL}`, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
     });

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useMultiplayer } from './useMultiplayer';
+import { API_BASE_URL } from '@/api/api';
 
 interface VoiceChatState {
   isConnected: boolean;
@@ -29,7 +30,7 @@ export const useVoiceChat = () => {
   useEffect(() => {
     if (!multiplayerConnected || !localPlayerId) return;
 
-    const socket = io('http://localhost:3001');
+    const socket = io(`${API_BASE_URL}`);
     socketRef.current = socket;
 
     socket.on('connect', () => {
