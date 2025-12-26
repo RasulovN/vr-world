@@ -34,6 +34,7 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
   const [canExitGameZone, setCanExitGameZone] = useState(false);
 
   const { localPlayerId, players, spawnedObjects: multiplayerSpawnedObjects, isConnected, updatePosition, spawnObject } = useMultiplayer();
+  const playerCount = Object.keys(players).length + 1;
   const { executeCommand, calculateSpawnPosition, isProcessing } = useAICommand(playerPosition);
   const { isConnected: voiceConnected, isMuted, isRecording, participants, startRecording, stopRecording, toggleMute } = useVoiceChat();
 
@@ -248,6 +249,7 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
       {/* UI Overlay */}
       <GameUI
         objectCount={spawnedObjects.length}
+        playerCount={playerCount}
         physicsEnabled={physicsEnabled}
         onPhysicsToggle={onPhysicsToggle || (() => {})}
       />

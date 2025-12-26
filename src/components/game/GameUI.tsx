@@ -1,13 +1,14 @@
-import { Gamepad2, Move, Box, Zap, ArrowUp, MousePointer, Settings } from 'lucide-react';
+import { Gamepad2, Move, Box, Zap, ArrowUp, MousePointer, Settings, Users } from 'lucide-react';
 import { useState } from 'react';
 
 interface GameUIProps {
   objectCount: number;
+  playerCount: number;
   physicsEnabled: boolean;
   onPhysicsToggle: (enabled: boolean) => void;
 }
 
-export const GameUI = ({ objectCount, physicsEnabled, onPhysicsToggle }: GameUIProps) => {
+export const GameUI = ({ objectCount, playerCount, physicsEnabled, onPhysicsToggle }: GameUIProps) => {
 
   return (
     <>
@@ -24,15 +25,25 @@ export const GameUI = ({ objectCount, physicsEnabled, onPhysicsToggle }: GameUIP
         </div>
 
         <div className="flex gap-2 mt-16">
-          <div className="glass-panel rounded-lg px-4 py-3 cyber-border">
-            <div className="flex items-center gap-3">
-              <Box className="w-5 h-5 text-secondary" />
-              <div>
-                <p className="text-sm text-foreground font-medium">{objectCount}</p>
-                <p className="text-xs text-muted-foreground">Ob'yektlar</p>
-              </div>
-            </div>
-          </div>
+           <div className="glass-panel rounded-lg px-4 py-3 cyber-border">
+             <div className="flex items-center gap-3">
+               <Users className="w-5 h-5 text-green-400" />
+               <div>
+                 <p className="text-sm text-foreground font-medium">{playerCount}</p>
+                 <p className="text-xs text-muted-foreground">O'yinchilar</p>
+               </div>
+             </div>
+           </div>
+
+           <div className="glass-panel rounded-lg px-4 py-3 cyber-border">
+             <div className="flex items-center gap-3">
+               <Box className="w-5 h-5 text-secondary" />
+               <div>
+                 <p className="text-sm text-foreground font-medium">{objectCount}</p>
+                 <p className="text-xs text-muted-foreground">Ob'yektlar</p>
+               </div>
+             </div>
+           </div>
 
           <button
             onClick={() => onPhysicsToggle(!physicsEnabled)}

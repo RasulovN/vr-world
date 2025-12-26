@@ -44,11 +44,13 @@ export const useMultiplayer = () => {
 
     socket.on('connect', () => {
       console.log('Connected to multiplayer server');
+      toast.success('Multiplayer serverga ulandik!');
       setState(prev => ({ ...prev, isConnected: true, localPlayerId: socket.id }));
     });
 
     socket.on('disconnect', () => {
       console.log('Disconnected from multiplayer server');
+      toast.error('Multiplayer serverdan uzildi!');
       setState(prev => ({ ...prev, isConnected: false, localPlayerId: null, players: {} }));
     });
 
