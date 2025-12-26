@@ -4,7 +4,6 @@ import { Physics } from '@react-three/cannon';
 import * as THREE from 'three';
 import { CyberGrid } from './CyberGrid';
 import { PlayerController } from './PlayerController';
-import { ThirdPersonCamera } from './ThirdPersonCamera';
 import { Avatar } from './Avatar';
 import { SpawnedObject, SpawnedObjectData } from './SpawnedObject';
 import { CommandInput } from './CommandInput';
@@ -165,15 +164,6 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
               ));
             })()}
 
-            {/* Third-person camera */}
-            <ThirdPersonCamera
-              target={playerPosition}
-              yaw={playerYaw}
-              pitch={cameraPitch}
-              distance={4}
-              height={1.5}
-              lerpFactor={0.15}
-            />
           </Physics>
         </Suspense>
       </Canvas>

@@ -17,6 +17,9 @@ const assetDatabase = [
   { id: 'lamp_floor.glb', name: 'chiroq', tags: ['chiroq', 'lamp', 'light', 'yorug\'lik'] },
   { id: 'sphere_glow.glb', name: 'shar', tags: ['shar', 'sphere', 'ball', 'to\'p'] },
   { id: 'city_scene.glb', name: 'city', tags: ['city', 'scene', 'urban', 'metropolis'] },
+  { id: 'ak_47_pbr.glb', name: 'ak_47', tags: ['ak_47', 'weapon', 'gun', 'firearm'] },
+  { id: 'cybr_truck.glb', name: 'cybr_truck', tags: ['cybr_truck', 'vehicle', 'truck'] },
+  { id: 'buggati.glb', name: 'buggati', tags: ['cybr_truck', 'buggati', 'truck'] },
 ];
 
 export const useAICommand = (playerPosition: THREE.Vector3) => {

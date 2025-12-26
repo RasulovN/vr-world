@@ -1,7 +1,9 @@
 import { useRef, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { useKeyboardControls } from '@/hooks/useKeyboardControls';
+import { useGamepadInput } from '@/hooks/useGamepadInput';
 import { Avatar } from './Avatar';
 
 interface PlayerControllerProps {
@@ -11,6 +13,8 @@ interface PlayerControllerProps {
   initialPosition: THREE.Vector3;
 }
 
+type CameraMode = 'follow' | 'head';
+
 export const PlayerController = ({
   onPositionChange,
   onYawChange,
@@ -18,19 +22,23 @@ export const PlayerController = ({
   initialPosition,
 }: PlayerControllerProps) => {
   const { gl } = useThree();
+  const playerRootRef = useRef<THREE.Group>(null);
+  const cameraPivotRef = useRef<THREE.Group>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera>(null);
+
   const positionRef = useRef(new THREE.Vector3().copy(initialPosition));
   const velocityRef = useRef(new THREE.Vector3());
   const yawRef = useRef(0);
   const pitchRef = useRef(0);
 
+  const [cameraMode, setCameraMode] = useState<CameraMode>('follow');
   const [isMouseLookEnabled, setIsMouseLookEnabled] = useState(false);
-  const [currentPosition, setCurrentPosition] = useState(new THREE.Vector3().copy(initialPosition));
-  const [currentYaw, setCurrentYaw] = useState(0);
 
   const keys = useKeyboardControls();
+  const { getCombinedInput, updateVirtualJoystick } = useGamepadInput();
 
   // Movement parameters
-  const baseSpeed = 0.05;
+  const baseSpeed = 0.03;
   const sprintMultiplier = 2.0;
   const acceleration = 0.02;
   const deceleration = 0.85;
@@ -83,29 +91,36 @@ export const PlayerController = ({
       );
     };
 
+    // Mode switching with 'C' key
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'c' || e.key === 'C') {
+        setCameraMode(prev => prev === 'follow' ? 'head' : 'follow');
+      }
+    };
+
     gl.domElement.addEventListener('mousedown', handleMouseDown);
     gl.domElement.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('pointerlockchange', handlePointerLockChange);
     document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       gl.domElement.removeEventListener('mousedown', handleMouseDown);
       gl.domElement.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('pointerlockchange', handlePointerLockChange);
       document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [gl.domElement, isMouseLookEnabled]);
 
   useFrame((state, delta) => {
-    // Update current position and yaw for Avatar
-    setCurrentPosition(positionRef.current.clone());
-    setCurrentYaw(yawRef.current);
+    if (!playerRootRef.current || !cameraPivotRef.current || !cameraRef.current) return;
 
     // Notify parent of current yaw and pitch
     onYawChange(yawRef.current);
     onPitchChange(pitchRef.current);
 
-    // Calculate movement direction relative to camera yaw
+    // Calculate movement direction relative to yaw (camera forward)
     const direction = new THREE.Vector3();
 
     if (keys.forward) direction.z -= 1;
@@ -113,14 +128,17 @@ export const PlayerController = ({
     if (keys.left) direction.x -= 1;
     if (keys.right) direction.x += 1;
 
-    if (direction.length() > 0) {
+    const isMoving = direction.length() > 0;
+    const isSprinting = keys.sprint;
+
+    if (isMoving) {
       direction.normalize();
 
-      // Rotate direction by current yaw to make movement relative to camera forward
+      // Rotate direction by current yaw to make movement relative to forward
       direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawRef.current);
 
       // Calculate target speed with sprint multiplier
-      const targetSpeed = baseSpeed * (keys.sprint ? sprintMultiplier : 1);
+      const targetSpeed = baseSpeed * (isSprinting ? sprintMultiplier : 1);
       direction.multiplyScalar(targetSpeed);
 
       // Apply acceleration
@@ -151,15 +169,40 @@ export const PlayerController = ({
       isGroundedRef.current = true;
     }
 
+    // Apply position and rotations
+    playerRootRef.current.position.copy(positionRef.current);
+    playerRootRef.current.rotation.y = yawRef.current;
+    cameraPivotRef.current.rotation.x = pitchRef.current;
+
+    // Set camera position based on mode
+    if (cameraMode === 'follow') {
+      // Behind and above avatar
+      cameraRef.current.position.set(0, 2, -5);
+    } else {
+      // At avatar head
+      cameraRef.current.position.set(0, 1.8, 0);
+    }
+
     // Notify parent of position change
     onPositionChange(positionRef.current.clone());
   });
 
   return (
-    <Avatar
-      onPositionChange={onPositionChange}
-      onRotationChange={onYawChange}
-      isRemote={false}
-    />
+    <group ref={playerRootRef}>
+      <Avatar
+        isRemote={false}
+        isMoving={velocityRef.current.length() > 0.01}
+        isSprinting={keys.sprint}
+      />
+      <group ref={cameraPivotRef}>
+        <PerspectiveCamera
+          ref={cameraRef}
+          makeDefault
+          fov={60}
+          near={0.1}
+          far={1000}
+        />
+      </group>
+    </group>
   );
 };
