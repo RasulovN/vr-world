@@ -35,7 +35,7 @@ export const useMultiplayer = () => {
 
   // Connect to WebSocket server
   useEffect(() => {
-    const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3333/' : 'http://45.138.158.158:3333/';
+    const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3333/' : 'ws://45.138.158.158:3333/';
     const socket = io(`${API_BASE_URL}`, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
