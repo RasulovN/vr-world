@@ -11,6 +11,7 @@ interface PlayerControllerProps {
   onYawChange: (yaw: number) => void;
   onPitchChange: (pitch: number) => void;
   initialPosition: THREE.Vector3;
+  onNearZone?: (near: boolean) => void;
 }
 
 type CameraMode = 'follow' | 'head';
@@ -20,6 +21,7 @@ export const PlayerController = ({
   onYawChange,
   onPitchChange,
   initialPosition,
+  onNearZone,
 }: PlayerControllerProps) => {
   const { gl } = useThree();
   const playerRootRef = useRef<THREE.Group>(null);
@@ -181,6 +183,15 @@ export const PlayerController = ({
     } else {
       // At avatar head
       cameraRef.current.position.set(0, 1.8, 0);
+    }
+
+    // Check if near GameZone (position [0, 0, 100])
+    const zonePosition = new THREE.Vector3(0, 0, 100);
+    const distanceToZone = positionRef.current.distanceTo(zonePosition);
+    const isNearZone = distanceToZone < 15; // 15 units radius for larger zone
+
+    if (onNearZone) {
+      onNearZone(isNearZone);
     }
 
     // Notify parent of position change

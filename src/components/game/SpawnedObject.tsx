@@ -138,7 +138,7 @@ export const objectConfigs: Record<string, ObjectConfig> = {
     name: 'Buggati Truck',
     color: '#888888',
     geometry: 'box',
-     scale: [80, 80, 80],
+     scale: [100, 100, 100],
     positionY: 0.7,
     material: 'standard',
     roughness: 0.3,

@@ -15,6 +15,7 @@ import { useVoiceChat } from '@/hooks/useVoiceChat';
 import { Environment } from './Environment';
 import { Yer } from './Yer';
 import { Wall } from './Wall';
+import { GameZone } from './GameZone';
 
 interface GameWorldProps {
   physicsEnabled?: boolean;
@@ -26,6 +27,8 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
   const [playerYaw, setPlayerYaw] = useState(0);
   const [cameraPitch, setCameraPitch] = useState(0);
   const [spawnedObjects, setSpawnedObjects] = useState<SpawnedObjectData[]>([]);
+  const [isNearZone, setIsNearZone] = useState(false);
+  const [isInZone, setIsInZone] = useState(false);
 
   const { localPlayerId, players, spawnedObjects: multiplayerSpawnedObjects, isConnected, updatePosition, spawnObject } = useMultiplayer();
   const { executeCommand, calculateSpawnPosition, isProcessing } = useAICommand(playerPosition);
@@ -43,6 +46,20 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
     setCameraPitch(pitch);
   }, []);
 
+  const handleNearZone = useCallback((near: boolean) => {
+    setIsNearZone(near);
+  }, []);
+
+  const handleEnterZone = useCallback(() => {
+    // Move player to center of GameZone
+    const zoneCenter = new THREE.Vector3(0, 1, 100);
+    setPlayerPosition(zoneCenter);
+    setIsInZone(true);
+    toast.success("Game Zone ga kirdingiz! Otishma o'yinlariga tayyor bo'ling!", {
+      description: "Arena chegaralarida ehtiyot bo'ling!",
+    });
+  }, []);
+
   // Send position updates to server
   useEffect(() => {
     if (isConnected) {
@@ -50,7 +67,7 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
     }
   }, [playerPosition, playerYaw, isConnected, updatePosition]);
 
-  // Voice chat keyboard shortcuts
+  // Voice chat keyboard shortcuts and zone entry
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'k') {
@@ -63,12 +80,22 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
       } else if (e.key === 'm' || e.key === 'M') {
         e.preventDefault();
         toggleMute();
+      } else if ((e.key === 'e' || e.key === 'E') && isNearZone && !isInZone) {
+        e.preventDefault();
+        handleEnterZone();
+      } else if ((e.key === 'q' || e.key === 'Q') && isInZone) {
+        e.preventDefault();
+        // Exit zone
+        const exitPos = new THREE.Vector3(0, 1, 50);
+        setPlayerPosition(exitPos);
+        setIsInZone(false);
+        toast.info("Game Zone dan chiqdingiz");
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isRecording, startRecording, stopRecording, toggleMute]);
+  }, [isRecording, startRecording, stopRecording, toggleMute, isNearZone, isInZone]);
 
   const handleCommand = useCallback(async (command: string) => {
     console.log('Processing command:', command);
@@ -125,17 +152,20 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
             {/* <CyberGrid /> */}
             <Yer />
 
+
             {/* Environment decorations */}
             {/* <Environment /> */}
 
             <Wall />
 
+            <GameZone />
             {/* Local player controller */}
             <PlayerController
               onPositionChange={handlePositionChange}
               onYawChange={handleYawChange}
               onPitchChange={handlePitchChange}
               initialPosition={playerPosition}
+              onNearZone={handleNearZone}
             />
 
             {/* Remote player avatars */}
@@ -174,6 +204,29 @@ export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorld
         physicsEnabled={physicsEnabled}
         onPhysicsToggle={onPhysicsToggle || (() => {})}
       />
+
+      {/* Game Zone Entry/Exit UI */}
+      {isNearZone && !isInZone && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 backdrop-blur-sm rounded-lg p-6 text-white text-center">
+          <h3 className="text-xl font-bold mb-4">🚀 Game Zone ga kirish</h3>
+          <p className="mb-4">Siz Game Zone yaqinidasiz. Otishma arenasi uchun E tugmasini bosing.</p>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium"
+            onClick={handleEnterZone}
+          >
+            Kirish (E)
+          </button>
+        </div>
+      )}
+
+      {/* In Zone UI */}
+      {isInZone && (
+        <div className="absolute top-4 left-4 bg-red-600/80 backdrop-blur-sm rounded-lg p-4 text-white">
+          <h4 className="font-bold mb-2">⚠️ Game Zone da siz</h4>
+          <p className="text-sm mb-2">Arena chegaralarida ehtiyot bo'ling!</p>
+          <p className="text-xs">Chiqish uchun Q tugmasini bosing</p>
+        </div>
+      )}
 
       {/* Voice Chat UI */}
       <div className="absolute top-4 right-4 flex flex-col gap-2">
