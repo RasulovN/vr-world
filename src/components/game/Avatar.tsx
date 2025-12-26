@@ -16,6 +16,10 @@ export const Avatar = ({ onPositionChange, onRotationChange, isRemote = false, r
   const rotationRef = useRef(0);
   const isMobileRef = useRef(false);
   const gyroBaseRef = useRef<number | null>(null);
+  const isMouseLooking = useRef(false);
+  const lastMousePos = useRef({ x: 0, y: 0 });
+  const mouseSensitivity = 0.002;
+
   
   const [keys, setKeys] = useState({
     forward: false,
@@ -32,7 +36,6 @@ export const Avatar = ({ onPositionChange, onRotationChange, isRemote = false, r
   const deceleration = 0.9;
   const jumpForce = 0.3;
   const gravity = 0.015;
-  const mouseSensitivity = 0.003;
   const gyroSensitivity = 0.02;
 
   const isGroundedRef = useRef(true);
@@ -176,6 +179,58 @@ export const Avatar = ({ onPositionChange, onRotationChange, isRemote = false, r
     };
   }, []);
 
+  // Mouse look controls (only for local player)
+  useEffect(() => {
+    if (isRemote) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isMouseLooking.current) return;
+
+      const deltaX = e.movementX || (e.clientX - lastMousePos.current.x);
+      const deltaY = e.movementY || (e.clientY - lastMousePos.current.y);
+
+      // Horizontal rotation (around Y axis)
+      rotationRef.current -= deltaX * mouseSensitivity;
+
+      lastMousePos.current = { x: e.clientX, y: e.clientY };
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 0) { // Left mouse button
+        isMouseLooking.current = true;
+        lastMousePos.current = { x: e.clientX, y: e.clientY };
+        document.body.requestPointerLock?.();
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) {
+        isMouseLooking.current = false;
+        document.exitPointerLock?.();
+      }
+    };
+
+    const handlePointerLockChange = () => {
+      if (document.pointerLockElement) {
+        isMouseLooking.current = true;
+      } else {
+        isMouseLooking.current = false;
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+    };
+  }, [isRemote, mouseSensitivity]);
+
   useFrame((state) => {
     if (!groupRef.current) return;
 
@@ -199,20 +254,23 @@ export const Avatar = ({ onPositionChange, onRotationChange, isRemote = false, r
     if (keys.right) direction.x += 1;
 
     if (direction.length() > 0) {
-      direction.normalize();
+      // Only rotate towards movement direction if not using mouse look
+      if (!isMouseLooking.current) {
+        direction.normalize();
 
-      // Calculate target rotation based on movement direction
-      const targetRotation = Math.atan2(direction.x, direction.z);
+        // Calculate target rotation based on movement direction
+        const targetRotation = Math.atan2(direction.x, direction.z);
 
-      // Smooth rotation towards movement direction
-      const currentRotation = rotationRef.current;
-      const rotationDiff = targetRotation - currentRotation;
+        // Smooth rotation towards movement direction
+        const currentRotation = rotationRef.current;
+        const rotationDiff = targetRotation - currentRotation;
 
-      // Normalize rotation difference to [-PI, PI]
-      const normalizedDiff = ((rotationDiff + Math.PI) % (Math.PI * 2)) - Math.PI;
+        // Normalize rotation difference to [-PI, PI]
+        const normalizedDiff = ((rotationDiff + Math.PI) % (Math.PI * 2)) - Math.PI;
 
-      // Apply smooth rotation
-      rotationRef.current += normalizedDiff * 0.1;
+        // Apply smooth rotation
+        rotationRef.current += normalizedDiff * 0.1;
+      }
 
       // Calculate target speed with sprint multiplier
       const targetSpeed = baseSpeed * (keys.sprint ? sprintMultiplier : 1);
@@ -277,7 +335,7 @@ export const Avatar = ({ onPositionChange, onRotationChange, isRemote = false, r
       }
     }
 
-    // Apply horizontal movement
+    // Apply horizontal movement (no collision detection)
     groupRef.current.position.add(new THREE.Vector3(velocityRef.current.x, 0, velocityRef.current.z));
 
     // Apply gravity and jumping
@@ -302,7 +360,7 @@ export const Avatar = ({ onPositionChange, onRotationChange, isRemote = false, r
   });
 
   return (
-    <group ref={groupRef} position={[0, 1, 0]}>
+    <group ref={groupRef}>
       {/* Head */}
       <mesh ref={headRef} position={[0, 1.8, 0]}>
         <sphereGeometry args={[0.15, 16, 16]} />

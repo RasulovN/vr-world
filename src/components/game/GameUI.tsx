@@ -1,10 +1,14 @@
-import { Gamepad2, Move, Box, Zap, ArrowUp, MousePointer } from 'lucide-react';
+import { Gamepad2, Move, Box, Zap, ArrowUp, MousePointer, Settings } from 'lucide-react';
+import { useState } from 'react';
 
 interface GameUIProps {
   objectCount: number;
+  physicsEnabled: boolean;
+  onPhysicsToggle: (enabled: boolean) => void;
 }
 
-export const GameUI = ({ objectCount }: GameUIProps) => {
+export const GameUI = ({ objectCount, physicsEnabled, onPhysicsToggle }: GameUIProps) => {
+
   return (
     <>
       {/* Header */}
@@ -19,14 +23,29 @@ export const GameUI = ({ objectCount }: GameUIProps) => {
           </div>
         </div>
 
-        <div className="glass-panel rounded-lg px-4 py-3 cyber-border">
-          <div className="flex items-center gap-3">
-            <Box className="w-5 h-5 text-secondary" />
-            <div>
-              <p className="text-sm text-foreground font-medium">{objectCount}</p>
-              <p className="text-xs text-muted-foreground">Ob'yektlar</p>
+        <div className="flex gap-2 mt-16">
+          <div className="glass-panel rounded-lg px-4 py-3 cyber-border">
+            <div className="flex items-center gap-3">
+              <Box className="w-5 h-5 text-secondary" />
+              <div>
+                <p className="text-sm text-foreground font-medium">{objectCount}</p>
+                <p className="text-xs text-muted-foreground">Ob'yektlar</p>
+              </div>
             </div>
           </div>
+
+          <button
+            onClick={() => onPhysicsToggle(!physicsEnabled)}
+            className="glass-panel rounded-lg px-4 py-3 cyber-border hover:bg-muted/20 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Settings className={`w-5 h-5 ${physicsEnabled ? 'text-green-400' : 'text-muted-foreground'}`} />
+              <div>
+                <p className="text-sm text-foreground font-medium">Fizika</p>
+                <p className="text-xs text-muted-foreground">{physicsEnabled ? 'Yoqilgan' : 'O\'chirilgan'}</p>
+              </div>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -53,8 +72,12 @@ export const GameUI = ({ objectCount }: GameUIProps) => {
             <ArrowUp className="w-3 h-3 text-blue-400" />
             <span className="text-xs text-muted-foreground">SPACE - Sakrash</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-1">
             <MousePointer className="w-3 h-3 text-green-400" />
+            <span className="text-xs text-muted-foreground">Chap tugma - Ko'rish</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MousePointer className="w-3 h-3 text-blue-400" />
             <span className="text-xs text-muted-foreground">O'ng tugma - Kamera</span>
           </div>
         </div>

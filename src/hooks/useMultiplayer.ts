@@ -9,9 +9,17 @@ export interface Player {
   rotation: number;
 }
 
+export interface SpawnedObjectData {
+  id: string;
+  assetId: string;
+  position: THREE.Vector3;
+  playerId: string;
+}
+
 export interface MultiplayerState {
   localPlayerId: string | null;
   players: Record<string, Player>;
+  spawnedObjects: Record<string, SpawnedObjectData>;
   isConnected: boolean;
 }
 
@@ -20,6 +28,7 @@ export const useMultiplayer = () => {
   const [state, setState] = useState<MultiplayerState>({
     localPlayerId: null,
     players: {},
+    spawnedObjects: {},
     isConnected: false,
   });
 
@@ -70,6 +79,23 @@ export const useMultiplayer = () => {
       });
     });
 
+    // Handle object spawning from other players
+    socket.on('objectSpawned', (objectData: { id: string; assetId: string; position: THREE.Vector3; playerId: string }) => {
+      console.log('Received spawned object:', objectData);
+      setState(prev => ({
+        ...prev,
+        spawnedObjects: {
+          ...prev.spawnedObjects,
+          [objectData.id]: {
+            id: objectData.id,
+            assetId: objectData.assetId,
+            position: new THREE.Vector3(objectData.position.x, objectData.position.y, objectData.position.z),
+            playerId: objectData.playerId,
+          },
+        },
+      }));
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -85,8 +111,20 @@ export const useMultiplayer = () => {
     }
   }, [state.isConnected]);
 
+  // Send spawned object to other players
+  const spawnObject = useCallback((id: string, assetId: string, position: THREE.Vector3) => {
+    if (socketRef.current && state.isConnected) {
+      socketRef.current.emit('spawnObject', {
+        id,
+        assetId,
+        position: { x: position.x, y: position.y, z: position.z },
+      });
+    }
+  }, [state.isConnected]);
+
   return {
     ...state,
     updatePosition,
+    spawnObject,
   };
 };

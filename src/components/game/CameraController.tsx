@@ -80,7 +80,10 @@ export const CameraController = ({ targetPosition, targetRotation = 0 }: CameraC
 
     camera.position.lerp(cameraPos, 0.1);
 
-    const lookAtTarget = new THREE.Vector3().copy(targetPosition);
+    // Look in the direction the avatar is facing (forward from avatar position)
+    const lookAtTarget = new THREE.Vector3(0, 0, -10); // Look 10 units forward
+    lookAtTarget.applyAxisAngle(new THREE.Vector3(0, 1, 0), targetRotation);
+    lookAtTarget.add(targetPosition);
     lookAtTarget.y += 1.5; // Look at avatar's head level
 
     camera.lookAt(lookAtTarget);

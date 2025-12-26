@@ -1,11 +1,11 @@
 import { useState, useCallback, Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Stars } from '@react-three/drei';
+import { Physics } from '@react-three/cannon';
 import * as THREE from 'three';
 import { CyberGrid } from './CyberGrid';
+import { PlayerController } from './PlayerController';
+import { ThirdPersonCamera } from './ThirdPersonCamera';
 import { Avatar } from './Avatar';
-import { Environment } from './Environment';
-import { CameraController } from './CameraController';
 import { SpawnedObject, SpawnedObjectData } from './SpawnedObject';
 import { CommandInput } from './CommandInput';
 import { GameUI } from './GameUI';
@@ -13,13 +13,22 @@ import { useAICommand } from '@/hooks/useAICommand';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { toast } from 'sonner';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
+import { Environment } from './Environment';
+import { Yer } from './Yer';
+import { Wall } from './Wall';
 
-export const GameWorld = () => {
+interface GameWorldProps {
+  physicsEnabled?: boolean;
+  onPhysicsToggle?: (enabled: boolean) => void;
+}
+
+export const GameWorld = ({ physicsEnabled = false, onPhysicsToggle }: GameWorldProps) => {
   const [playerPosition, setPlayerPosition] = useState(new THREE.Vector3(0, 1, 0));
-  const [playerRotation, setPlayerRotation] = useState(0);
+  const [playerYaw, setPlayerYaw] = useState(0);
+  const [cameraPitch, setCameraPitch] = useState(0);
   const [spawnedObjects, setSpawnedObjects] = useState<SpawnedObjectData[]>([]);
 
-  const { localPlayerId, players, isConnected, updatePosition } = useMultiplayer();
+  const { localPlayerId, players, spawnedObjects: multiplayerSpawnedObjects, isConnected, updatePosition, spawnObject } = useMultiplayer();
   const { executeCommand, calculateSpawnPosition, isProcessing } = useAICommand(playerPosition);
   const { isConnected: voiceConnected, isMuted, isRecording, participants, startRecording, stopRecording, toggleMute } = useVoiceChat();
 
@@ -27,16 +36,20 @@ export const GameWorld = () => {
     setPlayerPosition(pos);
   }, []);
 
-  const handleRotationChange = useCallback((rotation: number) => {
-    setPlayerRotation(rotation);
+  const handleYawChange = useCallback((yaw: number) => {
+    setPlayerYaw(yaw);
+  }, []);
+
+  const handlePitchChange = useCallback((pitch: number) => {
+    setCameraPitch(pitch);
   }, []);
 
   // Send position updates to server
   useEffect(() => {
     if (isConnected) {
-      updatePosition(playerPosition, playerRotation);
+      updatePosition(playerPosition, playerYaw);
     }
-  }, [playerPosition, playerRotation, isConnected, updatePosition]);
+  }, [playerPosition, playerYaw, isConnected, updatePosition]);
 
   // Voice chat keyboard shortcuts
   useEffect(() => {
@@ -59,8 +72,10 @@ export const GameWorld = () => {
   }, [isRecording, startRecording, stopRecording, toggleMute]);
 
   const handleCommand = useCallback(async (command: string) => {
+    console.log('Processing command:', command);
     const response = await executeCommand(command);
-    
+    console.log('Command response:', response);
+
     if (response.action === 'spawn' && response.asset_id && response.position) {
       const spawnPos = calculateSpawnPosition(response.position);
       const newObject: SpawnedObjectData = {
@@ -68,8 +83,16 @@ export const GameWorld = () => {
         assetId: response.asset_id,
         position: spawnPos,
       };
-      
+
+      console.log('Creating object locally:', newObject);
+
+      // Add to local state
       setSpawnedObjects(prev => [...prev, newObject]);
+
+      // Send to other players
+      console.log('Sending object to server...');
+      spawnObject(newObject.id, newObject.assetId, newObject.position);
+
       toast.success(`"${response.asset_id.replace('.glb', '')}" yaratildi!`, {
         description: `Pozitsiya: X:${spawnPos.x.toFixed(1)}, Z:${spawnPos.z.toFixed(1)}`,
       });
@@ -78,7 +101,7 @@ export const GameWorld = () => {
         description: response.message,
       });
     }
-  }, [executeCommand, calculateSpawnPosition]);
+  }, [executeCommand, calculateSpawnPosition, spawnObject]);
 
   return (
     <div className="w-full h-screen relative overflow-hidden bg-background">
@@ -90,59 +113,77 @@ export const GameWorld = () => {
         }}
       >
         <Suspense fallback={null}>
-          {/* Lighting */}
-          <ambientLight intensity={0.2} />
-          <directionalLight position={[10, 20, 10]} intensity={0.5} color="#ffffff" />
-          <pointLight position={[0, 10, 0]} intensity={1} color="#00f5ff" distance={50} />
-          
-          {/* Fog for atmosphere */}
-          <fog attach="fog" args={['#0a0a0f', 30, 100]} />
-          
-          {/* Stars background */}
-          <Stars
-            radius={100}
-            depth={50}
-            count={5000}
-            factor={4}
-            saturation={0}
-            fade
-            speed={1}
-          />
-          
-          {/* Cyber grid floor */}
-          <CyberGrid />
-          
-          {/* Environment decorations */}
-          <Environment />
+          <Physics gravity={physicsEnabled ? [0, -9.81, 0] : [0, 0, 0]}>
+            {/* Lighting */}
+            <ambientLight intensity={0.2} />
+            <directionalLight position={[10, 20, 10]} intensity={0.5} color="#ffffff" />
+            <pointLight position={[0, 10, 0]} intensity={1} color="#00f5ff" distance={50} />
 
-          {/* Local player avatar */}
-          <Avatar
-            onPositionChange={handlePositionChange}
-            onRotationChange={handleRotationChange}
-          />
+            {/* Fog for atmosphere */}
+            <fog attach="fog" args={['#0a0a0f', 30, 100]} />
 
-          {/* Remote player avatars */}
-          {Object.values(players).map((player) => (
-            <Avatar
-              key={player.id}
-              isRemote={true}
-              remotePosition={player.position}
-              remoteRotation={player.rotation}
+            {/* Cyber grid floor */}
+            {/* <CyberGrid /> */}
+            <Yer />
+
+            {/* Environment decorations */}
+            {/* <Environment /> */}
+
+            <Wall />
+
+            {/* Local player controller */}
+            <PlayerController
+              onPositionChange={handlePositionChange}
+              onYawChange={handleYawChange}
+              onPitchChange={handlePitchChange}
+              initialPosition={playerPosition}
             />
-          ))}
 
-          {/* Spawned objects */}
-          {spawnedObjects.map((obj) => (
-            <SpawnedObject key={obj.id} data={obj} />
-          ))}
-          
-          {/* Camera follow */}
-          <CameraController targetPosition={playerPosition} />
+            {/* Remote player avatars */}
+            {Object.values(players).map((player) => (
+              <Avatar
+                key={player.id}
+                isRemote={true}
+                remotePosition={player.position}
+                remoteRotation={player.rotation}
+              />
+            ))}
+
+            {/* Spawned objects (local + multiplayer) */}
+            {(() => {
+              const allObjects = [
+                ...spawnedObjects,
+                ...Object.values(multiplayerSpawnedObjects).map(obj => ({
+                  id: obj.id,
+                  assetId: obj.assetId,
+                  position: obj.position,
+                }))
+              ];
+              console.log('Rendering objects:', allObjects);
+              return allObjects.map((obj) => (
+                <SpawnedObject key={obj.id} data={obj} />
+              ));
+            })()}
+
+            {/* Third-person camera */}
+            <ThirdPersonCamera
+              target={playerPosition}
+              yaw={playerYaw}
+              pitch={cameraPitch}
+              distance={4}
+              height={1.5}
+              lerpFactor={0.15}
+            />
+          </Physics>
         </Suspense>
       </Canvas>
 
       {/* UI Overlay */}
-      <GameUI objectCount={spawnedObjects.length} />
+      <GameUI
+        objectCount={spawnedObjects.length}
+        physicsEnabled={physicsEnabled}
+        onPhysicsToggle={onPhysicsToggle || (() => {})}
+      />
 
       {/* Voice Chat UI */}
       <div className="absolute top-4 right-4 flex flex-col gap-2">

@@ -13,8 +13,10 @@ const assetDatabase = [
   { id: 'chair_modern.glb', name: 'stul', tags: ['stul', 'chair', 'seat', 'o\'tirg\'ich'] },
   { id: 'car_sedan.glb', name: 'mashina', tags: ['mashina', 'car', 'vehicle', 'avtomobil'] },
   { id: 'tree_oak.glb', name: 'daraxt', tags: ['daraxt', 'tree', 'nature', 'o\'simlik'] },
+  { id: 'forset.glb', name: 'forset', tags: ['forset', 'forset', 'nature', 'o\'rmon'] },
   { id: 'lamp_floor.glb', name: 'chiroq', tags: ['chiroq', 'lamp', 'light', 'yorug\'lik'] },
   { id: 'sphere_glow.glb', name: 'shar', tags: ['shar', 'sphere', 'ball', 'to\'p'] },
+  { id: 'city_scene.glb', name: 'city', tags: ['city', 'scene', 'urban', 'metropolis'] },
 ];
 
 export const useAICommand = (playerPosition: THREE.Vector3) => {

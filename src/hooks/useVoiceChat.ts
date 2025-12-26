@@ -7,6 +7,7 @@ interface VoiceChatState {
   isMuted: boolean;
   isRecording: boolean;
   participants: Record<string, boolean>; // playerId -> isSpeaking
+  voicePlayers: Record<string, boolean>; // playerId -> connected
 }
 
 export const useVoiceChat = () => {
@@ -21,6 +22,7 @@ export const useVoiceChat = () => {
     isMuted: false,
     isRecording: false,
     participants: {},
+    voicePlayers: {},
   });
 
   // Initialize WebRTC and Socket.IO for voice chat
@@ -37,7 +39,7 @@ export const useVoiceChat = () => {
 
     socket.on('disconnect', () => {
       console.log('Voice chat disconnected');
-      setState(prev => ({ ...prev, isConnected: false, participants: {} }));
+      setState(prev => ({ ...prev, isConnected: false, participants: {}, voicePlayers: {} }));
       cleanupConnections();
     });
 
@@ -89,6 +91,33 @@ export const useVoiceChat = () => {
           [data.playerId]: data.isSpeaking,
         },
       }));
+    });
+
+    // Handle player joined for voice connections
+    socket.on('playerJoined', (playerId: string) => {
+      setState(prev => ({
+        ...prev,
+        voicePlayers: {
+          ...prev.voicePlayers,
+          [playerId]: true,
+        },
+      }));
+    });
+
+    // Handle player disconnected
+    socket.on('playerDisconnected', (playerId: string) => {
+      setState(prev => {
+        const newParticipants = { ...prev.participants };
+        const newVoicePlayers = { ...prev.voicePlayers };
+        delete newParticipants[playerId];
+        delete newVoicePlayers[playerId];
+        return { ...prev, participants: newParticipants, voicePlayers: newVoicePlayers };
+      });
+      // Close connection if exists
+      if (peerConnectionsRef.current[playerId]) {
+        peerConnectionsRef.current[playerId].close();
+        delete peerConnectionsRef.current[playerId];
+      }
     });
 
     return () => {
@@ -201,8 +230,8 @@ export const useVoiceChat = () => {
 
     setState(prev => ({ ...prev, isRecording: true }));
 
-    // Create connections with existing players
-    Object.keys(players).forEach(async (playerId) => {
+    // Create connections with existing voice players
+    Object.keys(state.voicePlayers).forEach(async (playerId) => {
       if (playerId !== localPlayerId && !peerConnectionsRef.current[playerId]) {
         try {
           const peerConnection = createPeerConnection(playerId);
@@ -219,7 +248,7 @@ export const useVoiceChat = () => {
     });
 
     return true;
-  }, [players, localPlayerId, state.isMuted, createPeerConnection, initializeMicrophone]);
+  }, [state.voicePlayers, localPlayerId, state.isMuted, createPeerConnection, initializeMicrophone]);
 
   // Stop voice recording
   const stopRecording = useCallback(() => {
