@@ -20,13 +20,11 @@ export const ThirdPersonCamera = ({
   lerpFactor = 0.1
 }: ThirdPersonCameraProps) => {
   const { camera } = useThree();
-  const cameraPositionRef = useRef(new THREE.Vector3());
-  const cameraTargetRef = useRef(new THREE.Vector3());
 
   useFrame(() => {
     // Calculate ideal camera position behind and above the avatar
-    const offset = new THREE.Vector3(0, 0, distance);
-    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw); // Rotate by avatar yaw
+    const offset = new THREE.Vector3(0, 0, -distance);
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw); // Rotate by avatar yaw to stay behind
     offset.y = height; // Set height
 
     const idealPosition = new THREE.Vector3().copy(target).add(offset);
@@ -39,23 +37,13 @@ export const ThirdPersonCamera = ({
     // Ensure camera doesn't go below ground level
     idealPosition.y = Math.max(idealPosition.y, 0.5);
 
-    // Check if camera would clip through avatar (too close)
-    const distanceToAvatar = idealPosition.distanceTo(target);
-    if (distanceToAvatar < 2) {
-      // Push camera back if too close
-      const direction = new THREE.Vector3().subVectors(idealPosition, target).normalize();
-      idealPosition.copy(target).add(direction.multiplyScalar(2));
-    }
-
-    // Smooth interpolation to ideal position
-    cameraPositionRef.current.lerp(idealPosition, lerpFactor);
-    camera.position.copy(cameraPositionRef.current);
+    // Set camera position instantly to maintain constant distance
+    camera.position.copy(idealPosition);
 
     // Calculate look-at target (slightly above avatar position)
     const lookAtTarget = new THREE.Vector3(target.x, target.y + 1.5, target.z);
-    cameraTargetRef.current.lerp(lookAtTarget, lerpFactor);
 
-    camera.lookAt(cameraTargetRef.current);
+    camera.lookAt(lookAtTarget);
   });
 
   return null;

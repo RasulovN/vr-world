@@ -8,9 +8,11 @@ interface AvatarProps {
   isRemote?: boolean;
   remotePosition?: THREE.Vector3;
   remoteRotation?: number;
+  position?: THREE.Vector3;
+  rotation?: number;
 }
 
-export const Avatar = ({ onPositionChange, onRotationChange, isRemote = false, remotePosition, remoteRotation }: AvatarProps) => {
+export const Avatar = ({ onPositionChange, onRotationChange, isRemote = false, remotePosition, remoteRotation, position, rotation }: AvatarProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const velocityRef = useRef(new THREE.Vector3());
   const rotationRef = useRef(0);
@@ -242,6 +244,19 @@ export const Avatar = ({ onPositionChange, onRotationChange, isRemote = false, r
       if (remoteRotation !== undefined) {
         groupRef.current.rotation.y = remoteRotation;
       }
+      return;
+    }
+
+    // For local players, use position and rotation props if provided
+    if (position) {
+      groupRef.current.position.copy(position);
+    }
+    if (rotation !== undefined) {
+      groupRef.current.rotation.y = rotation;
+    }
+
+    // Skip movement logic for local players if position is controlled externally
+    if (position) {
       return;
     }
 

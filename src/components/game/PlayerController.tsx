@@ -24,11 +24,13 @@ export const PlayerController = ({
   const pitchRef = useRef(0);
 
   const [isMouseLookEnabled, setIsMouseLookEnabled] = useState(false);
+  const [currentPosition, setCurrentPosition] = useState(new THREE.Vector3().copy(initialPosition));
+  const [currentYaw, setCurrentYaw] = useState(0);
 
   const keys = useKeyboardControls();
 
   // Movement parameters
-  const baseSpeed = 0.1;
+  const baseSpeed = 0.05;
   const sprintMultiplier = 2.0;
   const acceleration = 0.02;
   const deceleration = 0.85;
@@ -95,6 +97,10 @@ export const PlayerController = ({
   }, [gl.domElement, isMouseLookEnabled]);
 
   useFrame((state, delta) => {
+    // Update current position and yaw for Avatar
+    setCurrentPosition(positionRef.current.clone());
+    setCurrentYaw(yawRef.current);
+
     // Notify parent of current yaw and pitch
     onYawChange(yawRef.current);
     onPitchChange(pitchRef.current);
