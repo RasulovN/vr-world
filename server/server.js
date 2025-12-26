@@ -38,5 +38,6 @@ app.get('/', (req, res) => {
 });
 
 server.listen(config.port, () => {
+  console.log(`localhost:${config.port}`);
   console.log(`Multiplayer server running on port ${config.port} in ${process.env.NODE_ENV} mode`);
 });

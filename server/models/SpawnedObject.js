@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const spawnedObjectSchema = new mongoose.Schema({
   id: {
@@ -25,4 +25,4 @@ const spawnedObjectSchema = new mongoose.Schema({
   }
 });
 
-export default mongoose.model('SpawnedObject', spawnedObjectSchema);
+module.exports = mongoose.model('SpawnedObject', spawnedObjectSchema);
